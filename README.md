@@ -1,4 +1,4 @@
-# detector
+# detector [![](https://jitpack.io/v/core-lib/detector.svg)](https://jitpack.io/#core-lib/detector)
 Classpath Resource Detection For Java.
 
 # Installation

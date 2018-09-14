@@ -107,7 +107,7 @@ public class SimpleDetector implements Detector {
         // on dig
         if (file.isDirectory() && recursive) {
             File[] files = file.listFiles();
-            if (files == null || file.length() == 0) {
+            if (files == null || files.length == 0) {
                 return resources;
             }
             for (File f : files) {

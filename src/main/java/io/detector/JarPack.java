@@ -5,6 +5,7 @@ import java.net.URL;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 
@@ -44,6 +45,34 @@ public class JarPack extends JarFile {
             in = new URL(url).openStream();
             out = new FileOutputStream(tmpFile);
             IoKit.transfer(in, out);
+            // 文件夹
+            if (tmpFile.length() == 0) {
+                JarOutputStream jos = null;
+                try {
+                    jos = new JarOutputStream(out);
+                    Enumeration<JarEntry> entries = super.entries();
+                    String root = ("/" + parts[1] + "/").replaceAll("/+", "/");
+                    while (entries.hasMoreElements()) {
+                        JarEntry entry = entries.nextElement();
+                        if (entry.isDirectory()) continue;
+                        String file = "/" + entry.getName();
+                        if (!file.startsWith(root)) continue;
+                        InputStream jes = null;
+                        try {
+                            JarEntry newEntry = new JarEntry(file.substring(root.length()));
+                            jos.putNextEntry(newEntry);
+                            jes = new URL("jar:file:" + super.getName() + "!/" + entry.getName()).openStream();
+                            IoKit.transfer(jes, jos);
+                            jos.closeEntry();
+                        } finally {
+                            IoKit.close(jes);
+                        }
+                    }
+                    jos.finish();
+                } finally {
+                    IoKit.close(jos);
+                }
+            }
             this.jarName = (path.startsWith("/") ? "" : "/") + path;
             this.jarFile = new JarFile(tmpFile, verify);
         } catch (IOException e) {

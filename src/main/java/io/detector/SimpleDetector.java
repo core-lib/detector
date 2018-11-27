@@ -146,17 +146,18 @@ public class SimpleDetector implements Detector {
             if (jarEntry.isDirectory()) {
                 continue;
             }
-            Resource resource = new JarResource(classpath, jarEntry, classLoader);
             // normalize
             String path = "/" + jarEntry.getName();
             if (recursive) {
-                if (path.startsWith(root) && chain.reset().doNext(resource)) {
-                    resources.add(resource);
+                if (path.startsWith(root)) {
+                    Resource resource = new JarResource(classpath, jarEntry, classLoader);
+                    if (chain.reset().doNext(resource)) resources.add(resource);
                 }
             } else {
                 path = path.substring(0, path.lastIndexOf('/') + 1);
-                if (path.equals(root) && chain.reset().doNext(resource)) {
-                    resources.add(resource);
+                if (path.equals(root)) {
+                    Resource resource = new JarResource(classpath, jarEntry, classLoader);
+                    if (chain.reset().doNext(resource)) resources.add(resource);
                 }
             }
         }

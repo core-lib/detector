@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.JarURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -76,17 +77,17 @@ public class SimpleDetector implements Detector {
             String protocol = url.getProtocol();
             // disk file
             if ("file".equalsIgnoreCase(protocol)) {
-                String path = url.getPath();
+                String path = UriKit.decode(url.getPath(), Charset.defaultCharset().name());
                 String root = path.substring(0, path.length() - folder.length());
-                URL classpath = new URL(url, "file:" + root);
+                URL classpath = new URL(url, "file:" + UriKit.encodePath(root, Charset.defaultCharset().name()));
                 File file = new File(path);
                 resources.addAll(detect(classpath, file, chain));
             }
             // jar file
             else if ("jar".equalsIgnoreCase(protocol) && jarIncluded) {
-                String path = url.getPath();
+                String path = UriKit.decode(url.getPath(), Charset.defaultCharset().name());
                 String root = path.substring(0, path.length() - folder.length());
-                URL classpath = new URL(url, "jar:" + root);
+                URL classpath = new URL(url, "jar:" + UriKit.encodePath(root, Charset.defaultCharset().name()));
                 JarURLConnection jarURLConnection = (JarURLConnection) url.openConnection();
                 JarFile jarFile = jarURLConnection.getJarFile();
                 resources.addAll(detect(classpath, jarFile, chain));

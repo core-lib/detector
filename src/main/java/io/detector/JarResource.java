@@ -2,6 +2,7 @@ package io.detector;
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.jar.JarEntry;
 
 /**
@@ -24,7 +25,7 @@ public class JarResource extends ClasspathResource implements Resource {
     public JarResource(URL classpath, JarEntry jarEntry, ClassLoader classLoader) throws IOException {
         super(classLoader);
         this.name = jarEntry.getName();
-        this.url = new URL(classpath, name);
+        this.url = new URL(classpath, UriKit.encodePath(name, Charset.defaultCharset().name()));
     }
 
     public String getName() {

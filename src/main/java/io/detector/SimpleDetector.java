@@ -2,6 +2,7 @@ package io.detector;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.JarURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -67,27 +68,28 @@ public class SimpleDetector implements Detector {
     public Collection<Resource> detect(FilterChain chain) throws IOException {
         Collection<Resource> resources = new ArrayList<Resource>();
         // normalize and make it supports java package name
-        String root = directory.replace('.', '/');
-        Enumeration<URL> enumeration = classLoader.getResources(root);
+        String folder = directory.replace('.', '/');
+        Enumeration<URL> enumeration = classLoader.getResources(folder);
         // loop
         while (enumeration != null && enumeration.hasMoreElements()) {
             URL url = enumeration.nextElement();
             String protocol = url.getProtocol();
             // disk file
             if ("file".equalsIgnoreCase(protocol)) {
-                resources.addAll(detect(new File(url.getFile()), chain));
+                String path = url.getPath();
+                String root = path.substring(0, path.length() - folder.length());
+                URL classpath = new URL(url, "file:" + root);
+                File file = new File(path);
+                resources.addAll(detect(classpath, file, chain));
             }
             // jar file
             else if ("jar".equalsIgnoreCase(protocol) && jarIncluded) {
-                JarFile jarFile = null;
-                try {
-                    String file = url.getFile();
-                    String path = file.substring(file.indexOf(":") + 1, file.lastIndexOf("!"));
-                    jarFile = new JarPack(path);
-                    resources.addAll(detect(jarFile, chain));
-                } finally {
-                    IoKit.close(jarFile);
-                }
+                String path = url.getPath();
+                String root = path.substring(0, path.length() - folder.length());
+                URL classpath = new URL(url, "jar:" + root);
+                JarURLConnection jarURLConnection = (JarURLConnection) url.openConnection();
+                JarFile jarFile = jarURLConnection.getJarFile();
+                resources.addAll(detect(classpath, jarFile, chain));
             }
         }
         return resources;
@@ -101,22 +103,21 @@ public class SimpleDetector implements Detector {
      * resource
      * @throws IOException when I/O error occur
      */
-    private Collection<Resource> detect(File file, FilterChain chain) throws IOException {
+    private Collection<Resource> detect(URL classpath, File file, FilterChain chain) throws IOException {
         Collection<Resource> resources = new ArrayList<Resource>();
-        // if it is a directory and detector supports recursively detection go
-        // on dig
+        // if it is a directory and detector supports recursively detection go on dig
         if (file.isDirectory() && recursive) {
-            File[] files = file.listFiles();
-            if (files == null || files.length == 0) {
+            File[] children = file.listFiles();
+            if (children == null || children.length == 0) {
                 return resources;
             }
-            for (File f : files) {
-                resources.addAll(detect(f, chain));
+            for (File child : children) {
+                resources.addAll(detect(classpath, child, chain));
             }
         }
         // if it is a file, determine it is accepted or not
         else if (file.isFile()) {
-            Resource resource = new FileResource(file, classLoader);
+            Resource resource = new FileResource(classpath, file, classLoader);
             if (chain.reset().doNext(resource)) {
                 resources.add(resource);
             }
@@ -132,21 +133,19 @@ public class SimpleDetector implements Detector {
      * @return all of accepted jar entry resources in the specified jar library
      * @throws IOException when I/O error occur
      */
-    private Collection<Resource> detect(JarFile jarFile, FilterChain chain) throws IOException {
+    private Collection<Resource> detect(URL classpath, JarFile jarFile, FilterChain chain) throws IOException {
         Collection<Resource> resources = new ArrayList<Resource>();
-        // normalize
         String root = directory.replace('.', '/');
         root = root.startsWith("/") ? root : "/" + root;
         root = root.endsWith("/") ? root : root + "/";
-        Enumeration<JarEntry> enumeration = jarFile.entries();
-        // loop
-        while (enumeration != null && enumeration.hasMoreElements()) {
-            JarEntry jarEntry = enumeration.nextElement();
+        Enumeration<JarEntry> entries = jarFile.entries();
+        while (entries.hasMoreElements()) {
+            JarEntry jarEntry = entries.nextElement();
             // ignore directory in jar file
             if (jarEntry.isDirectory()) {
                 continue;
             }
-            Resource resource = new JarResource(jarFile, jarEntry, classLoader);
+            Resource resource = new JarResource(classpath, jarEntry, classLoader);
             // normalize
             String path = "/" + jarEntry.getName();
             if (recursive) {
@@ -155,7 +154,7 @@ public class SimpleDetector implements Detector {
                 }
             } else {
                 path = path.substring(0, path.lastIndexOf('/') + 1);
-                if (path.equals(root)) {
+                if (path.equals(root) && chain.reset().doNext(resource)) {
                     resources.add(resource);
                 }
             }

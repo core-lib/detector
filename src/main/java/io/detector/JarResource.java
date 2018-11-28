@@ -25,7 +25,7 @@ public class JarResource extends ClasspathResource implements Resource {
     public JarResource(URL classpath, JarEntry jarEntry, ClassLoader classLoader) throws IOException {
         super(classLoader);
         this.name = jarEntry.getName();
-        this.url = new URL(classpath, UriKit.encodePath(name, Charset.defaultCharset().name()));
+        this.url = new URL(classpath, UriKit.encodePath(name, Charset.defaultCharset()));
     }
 
     public String getName() {

@@ -70,6 +70,8 @@ public class SimpleDetector implements Detector {
         Collection<Resource> resources = new ArrayList<Resource>();
         // normalize and make it supports java package name
         String folder = directory.replace('.', '/');
+        while (folder.startsWith("/")) folder = folder.substring(1);
+        while (folder.endsWith("/")) folder = folder.substring(0, folder.length() - 1);
         Enumeration<URL> enumeration = classLoader.getResources(folder);
         // loop
         while (enumeration != null && enumeration.hasMoreElements()) {
@@ -77,17 +79,17 @@ public class SimpleDetector implements Detector {
             String protocol = url.getProtocol();
             // disk file
             if ("file".equalsIgnoreCase(protocol)) {
-                String path = UriKit.decode(url.getPath(), Charset.defaultCharset().name());
-                String root = path.substring(0, path.length() - folder.length());
-                URL classpath = new URL(url, "file:" + UriKit.encodePath(root, Charset.defaultCharset().name()));
+                String path = UriKit.decode(url.getPath(), Charset.defaultCharset());
+                String root = path.substring(0, path.lastIndexOf(folder));
+                URL classpath = new URL(url, "file:" + UriKit.encodePath(root, Charset.defaultCharset()));
                 File file = new File(path);
                 resources.addAll(detect(classpath, file, chain));
             }
             // jar file
             else if ("jar".equalsIgnoreCase(protocol) && jarIncluded) {
-                String path = UriKit.decode(url.getPath(), Charset.defaultCharset().name());
-                String root = path.substring(0, path.length() - folder.length());
-                URL classpath = new URL(url, "jar:" + UriKit.encodePath(root, Charset.defaultCharset().name()));
+                String path = UriKit.decode(url.getPath(), Charset.defaultCharset());
+                String root = path.substring(0, path.lastIndexOf(folder));
+                URL classpath = new URL(url, "jar:" + UriKit.encodePath(root, Charset.defaultCharset()));
                 JarURLConnection jarURLConnection = (JarURLConnection) url.openConnection();
                 JarFile jarFile = jarURLConnection.getJarFile();
                 resources.addAll(detect(classpath, jarFile, chain));
